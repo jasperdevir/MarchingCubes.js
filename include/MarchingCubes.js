@@ -4,10 +4,6 @@ import {
     Box3,
     BufferGeometry,
     BufferAttribute,
-    BoxGeometry,
-    MeshBasicMaterial,
-    MeshPhongMaterial,
-    DoubleSide,
     Mesh,
     Box3Helper,
 }from 'three'
@@ -15,7 +11,7 @@ import {
 const ENABLED_COLOR = new Color(0,1,0);
 const DISABLED_COLOR = new Color(1,0,0);
 
-class ScalarPoint {
+class MarchingPoint {
 
     constructor(pos, enabled){
         this.pos = pos;
@@ -29,17 +25,15 @@ class ScalarPoint {
     }
 
     initGuide(){
-        var material = new MeshBasicMaterial();
-        material.wireframe = true;
-        if(this.enabled){
-            material.color = ENABLED_COLOR;
-        } else {
-            material.color = DISABLED_COLOR;
-        }
-        var geometry = new BoxGeometry(0.1, 0.1, 0.1);
+        var color = new Color();
 
-        this.mesh = new Mesh(geometry, material);
-        this.mesh.position.copy(this.pos);
+        if(this.enabled){
+            color = ENABLED_COLOR;
+        } else {
+            color = DISABLED_COLOR;
+        } 
+
+        this.guide = new Box3Helper(this.box, color);
     }
 
     equals(point){
@@ -54,7 +48,7 @@ class ScalarPoint {
     }
 }
 
-class ScalarCube {
+class MarchingCube {
 
     constructor(points){
         this.points = points;
@@ -70,22 +64,24 @@ class ScalarCube {
  
         //Calculate mid points of each between vertices
         for (const [p1Index, p2Index] of edgeIndices) {
-            const p1 = points[p1Index].pos;
-            const p2 = points[p2Index].pos;
-            const edgeVertex = p1.clone().lerp(p2, 0.5); 
-            this.edgePoints.push(edgeVertex);
+            if (this.points[p1Index] && this.points[p2Index]) {
+                const p1 = this.points[p1Index].pos;
+                const p2 = this.points[p2Index].pos;
+                const edgeVertex = p1.clone().lerp(p2, 0.5);
+                this.edgePoints.push(edgeVertex);
+            }
         }
     }
 
-    addToScene(scene){
+    addGuides(scene){
         for(var i = 0; i < this.points.length; i++){
-            scene.add(this.points[i].mesh);
+            scene.add(this.points[i].guide);
         }
     }
 
-    removeFromScene(scene){
+    removeGuides(scene){
         for(var i = 0; i < this.points.length; i++){
-            scene.remove(this.points[i].mesh);
+            scene.remove(this.points[i].guide);
         }
     }
 
@@ -113,9 +109,9 @@ class ScalarCube {
     }
 }
 
-class ScalarGrid {
+class MarchingGrid {
 
-    constructor(pos, dimensions, color){
+    constructor(pos, dimensions, material){
         this.pos = pos;
         this.width = dimensions.x;
         this.height = dimensions.y;
@@ -130,11 +126,20 @@ class ScalarGrid {
             this.pos.z + this.depth * this.scale
         );
 
-        this.needsUpdate = false;
+        this.boundsGuide = new Box3Helper(this.box);
 
-        //Generate grid of cubes
+        this.boundsGuideEnabled = false;
+        this.pointGuidesEnabled = false;
+
         this.cubes = [];
 
+        this.material = material;
+        this.mesh = new Mesh();
+
+        this.initGrid();
+    }
+
+    initGrid(){
         //Generate grid of cubes
         for (var x = 0; x < this.width; x++) {
             this.cubes[x] = [];
@@ -142,57 +147,74 @@ class ScalarGrid {
                 this.cubes[x][y] = [];
                 for (var z = 0; z < this.depth; z++) {
                     // Define points of cube
-                    var enabled;
-                    if(x == this.width - 1 || y == this.height - 1 || z == this.depth - 1 || x == 0 || y == 0 || z == 0){
-                        enabled = false;
+                    var points;
+                    if(x == 0 || y == 0 || z == 0 || x == this.width - 1 || y == this.height - 1 || z == this.depth - 1){
+                        var points = [
+                            new MarchingPoint(new Vector3(x * this.scale, y * this.scale, z * this.scale).add(this.pos), false),
+                            new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), false),
+                            new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), false),
+                            new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, z * this.scale).add(this.pos), false),
+                            new MarchingPoint(new Vector3(x * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), false),
+                            new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), false),
+                            new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), false),
+                            new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), false)
+                        ];
                     } else {
-                        enabled = Math.random() < 0.7;
+                        var points = [
+                            new MarchingPoint(new Vector3(x * this.scale, y * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
+                            new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
+                            new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
+                            new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
+                            new MarchingPoint(new Vector3(x * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
+                            new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
+                            new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
+                            new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5)
+                        ];
                     }
+
                     
-                    
-                    var points = [
-                        new ScalarPoint(new Vector3(x * this.scale, y * this.scale, z * this.scale).add(this.pos), enabled),
-                        new ScalarPoint(new Vector3(x * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), enabled),
-                        new ScalarPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), enabled),
-                        new ScalarPoint(new Vector3((x + 1) * this.scale, y * this.scale, z * this.scale).add(this.pos), enabled),
-                        new ScalarPoint(new Vector3(x * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), enabled),
-                        new ScalarPoint(new Vector3(x * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), enabled),
-                        new ScalarPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), enabled),
-                        new ScalarPoint(new Vector3((x + 1) * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), enabled)
-                    ];
-                    points = this.checkDupPoints(points);
+                    points = this.validatePoints(x, y, z, points);
     
-                    this.cubes[x][y][z] = new ScalarCube(points);
+                    this.cubes[x][y][z] = new MarchingCube(points);
                 }
             }
         }
-
-        this.mesh = new Mesh();
-        this.color = color;
     }
 
-    checkDupPoints(points){
-        for (var x = 0; x < this.cubes.length; x++) {
-            for (var y = 0; y < this.cubes[x].length; y++) {
-                for (var z = 0; z < this.cubes[x][y].length; z++) {
-                    const cube = this.cubes[x][y][z];
-                    for(var i = 0; i < cube.points.length; i++){
-                        for(var j = 0; j < points.length; j++){
-                            if(points[j].equals(cube.points[i])){
-                                points.splice(j, 1, cube.points[i]);
-                            }
-                        }
+    validatePoints(x, y, z, points){
+        const adjCubes = [];
+
+        if (x > 0) adjCubes.push(this.cubes[x - 1][y][z]);
+        if (y > 0) adjCubes.push(this.cubes[x][y - 1][z]);
+        if (z > 0) adjCubes.push(this.cubes[x][y][z - 1]);
+
+        if (x > 0 && y > 0) adjCubes.push(this.cubes[x - 1][y - 1][z]);
+        if (x > 0 && z > 0) adjCubes.push(this.cubes[x - 1][y][z - 1]);
+        if (y > 0 && z > 0) adjCubes.push(this.cubes[x][y - 1][z - 1]);
+
+        if (x > 0 && y > 0 && z > 0) adjCubes.push(this.cubes[x - 1][y - 1][z - 1]);
+
+        const validPoints = [];
+
+        for(let i = 0; i < points.length; i++){
+            let valid = true;
+            for(let j = 0; j < adjCubes.length; j++){
+                const cube = adjCubes[j];
+                for(let k = 0; k < cube.points.length; k++){
+                    if(cube.points[k].equals(points[i])){
+                        validPoints.push(cube.points[k]);
+                        valid = false;
+                        break;
                     }
                 }
+                if(!valid) break;
+            }
+            if(valid){
+                validPoints.push(points[i]);
             }
         }
-        return points;
-    }
 
-    getCenter(){
-        var center = new Vector3();
-        this.box.getCenter(center);
-        return center;
+        return validPoints;
     }
 
     transferPoints(oldGrid) {
@@ -209,34 +231,48 @@ class ScalarGrid {
         }
     }
 
-    addToScene(scene){
-        scene.add(new Box3Helper(this.box, new Color(1,1,1)));
+    add(scene, boundsGuide, pointGuides){
+        if(boundsGuide){
+            this.boundsGuideEnabled = true;
+            scene.add(this.boundsGuide);
+        }
+
         scene.add(this.mesh);
         
-        /*
-        for (var x = 0; x < this.width; x++) {
-            for (var y = 0; y < this.height; y++) {
-                for (var z = 0; z < this.depth; z++) {
-                    this.cubes[x][y][z].addToScene(scene);
+        if(pointGuides){
+            this.pointGuidesEnabled = true;
+            for (var x = 0; x < this.width; x++) {
+                for (var y = 0; y < this.height; y++) {
+                    for (var z = 0; z < this.depth; z++) {
+                        this.cubes[x][y][z].addGuides(scene);
+                    }
                 }
             }
         }
-        */
-    
     }
 
-    removeFromScene(scene){
+    remove(scene){
+        if(this.boundsGuideEnabled){
+            scene.remove(this.boundsGuide);
+            this.boundsGuideEnabled = false;
+        }
+
         scene.remove(this.mesh);
-        for (var x = 0; x < this.width; x++) {
-            for (var y = 0; y < this.height; y++) {
-                for (var z = 0; z < this.depth; z++) {
-                    this.cubes[x][y][z].removeFromScene(scene);
+
+        if(this.pointGuidesEnabled){
+            for (var x = 0; x < this.width; x++) {
+                for (var y = 0; y < this.height; y++) {
+                    for (var z = 0; z < this.depth; z++) {
+                        this.cubes[x][y][z].removeGuides(scene);
+                    }
                 }
             }
+            this.pointGuidesEnabled = false;
         }
+        
     }
 
-    genMesh(scene){
+    genMesh(){
         var vertices = [];
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
@@ -248,14 +284,10 @@ class ScalarGrid {
 
         var geometry = new BufferGeometry();
         geometry.setAttribute('position', new BufferAttribute(new Float32Array(vertices), 3));
-        var material = new MeshPhongMaterial({color: new Color(this.color)});
-        material.side = DoubleSide;
 
         geometry.computeVertexNormals();
         
-        scene.remove(this.mesh);
-        this.mesh = new Mesh(geometry, material);
-        scene.add(this.mesh);
+        this.mesh = new Mesh(geometry, this.material);
     }
     
 }
@@ -519,5 +551,5 @@ const triangulationTable = [
     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
 ];
 
-export {ScalarGrid};
+export { MarchingGrid };
 

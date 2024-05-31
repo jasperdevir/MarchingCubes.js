@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+
 import { OrbitControls } from 'orbit_controls';
 import { GUI } from 'gui';
-import { ScalarGrid } from 'marching_cubes';
+
+import { MarchingGrid } from 'marching_cubes';
 
 var scene, camera, renderer, controls, gui, clock;
 var grid;
@@ -38,20 +40,34 @@ var gridParams = {
     height: 10,
     depth: 10,
     scale: 1,
-    color: 0xffffff
+    color: 0xffffff,
+    regenGrid: function(){
+        grid.remove(scene);
+        genGrid();
+    }
 };
 
 function initGui(){
     const gridFolder = gui.addFolder('Grid');
 
-    gridFolder.add(gridParams.pos, 'x');
-    gridFolder.add(gridParams.pos, 'y');
-    gridFolder.add(gridParams.pos, 'z');
-    gridFolder.add(gridParams, 'width');
-    gridFolder.add(gridParams, 'height');
-    gridFolder.add(gridParams, 'depth');
-    gridFolder.add(gridParams, 'scale');
-    gridFolder.addColor(gridParams, 'color');
+    const posFolder = gridFolder.addFolder('Position');
+    posFolder.add(gridParams.pos, 'x');
+    posFolder.add(gridParams.pos, 'y');
+    posFolder.add(gridParams.pos, 'z');
+
+    const dimFolder = gridFolder.addFolder('Dimensions');
+    dimFolder.add(gridParams, 'width').name('Width');
+    dimFolder.add(gridParams, 'height').name('Height');
+    dimFolder.add(gridParams, 'depth').name('Depth');
+    dimFolder.add(gridParams, 'scale').name('Scale');
+
+    gridFolder.add(gridParams, 'regenGrid').name("Regenerate Grid");
+
+    gridFolder.addColor(gridParams, 'color').name("Color")
+    .onChange(() => {
+        grid.mesh.material.color = new THREE.Color(gridParams.color);
+    });
+    
 
 }
 
@@ -64,28 +80,26 @@ function initLighting(){
     scene.add(camera);
 }
 
-function initGrid(){
-    var gridPos = new THREE.Vector3(
-        gridParams.pos.x - gridParams.width / 2, 
-        gridParams.pos.y - gridParams.height / 2,
-        gridParams.pos.z - gridParams.depth / 2
+function genGrid(){
+    const pos = new THREE.Vector3(
+        gridParams.pos.x - (gridParams.width / 2) * gridParams.scale, 
+        gridParams.pos.y - (gridParams.height / 2) * gridParams.scale,
+        gridParams.pos.z - (gridParams.depth / 2) * gridParams.scale
     );
 
-    var gridDimensions = new THREE.Vector4(
+    const dimensions = new THREE.Vector4(
         gridParams.width, 
         gridParams.height, 
         gridParams.depth, 
         gridParams.scale
     );
 
-    grid = new ScalarGrid(
-        gridPos,
-        gridDimensions,
-        gridParams.color
-    );
+    const material = new THREE.MeshPhongMaterial({color: gridParams.color, side: THREE.DoubleSide});
 
-    grid.genMesh(scene);
-    grid.addToScene(scene);
+    grid = new MarchingGrid(pos, dimensions, material);
+
+    grid.genMesh();
+    grid.add(scene, true, false);
 }
 
 var update = function(){
@@ -98,8 +112,6 @@ var update = function(){
 initScene();
 initGui();
 initLighting();
-initGrid();
-
-console.log(scene);
+genGrid();
 
 requestAnimationFrame(update);
