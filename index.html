@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Marching Cubes</title>
+		<style>
+			body { margin: 0; }
+		</style>
+	</head>
+    
+	<body>
+		<style>
+			body {
+			font-family: Monospace;
+			background-color: #000;
+			color: #fff;
+			margin: 0px;
+			overflow: hidden;
+		}
+		#info {
+			position: absolute;
+			top: 10px;
+			width: 100%;
+			text-align: center;
+		}
+		
+		</style>
+		
+		
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "./include/three.module.js",
+					"orbit_controls": "./include/controls/OrbitControls.js",
+					"marching_cubes": "./include/MarchingCubes.js",
+					"gui": "./include/lil-gui.module.min.js"
+				}
+			}
+		</script>
+		
+		<script type="module" src="/main.js"></script>
+	</body>
+</html>
