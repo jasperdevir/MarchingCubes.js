@@ -50,11 +50,6 @@ var gridParams = {
 function initGui(){
     const gridFolder = gui.addFolder('Grid');
 
-    const posFolder = gridFolder.addFolder('Position');
-    posFolder.add(gridParams.pos, 'x');
-    posFolder.add(gridParams.pos, 'y');
-    posFolder.add(gridParams.pos, 'z');
-
     const dimFolder = gridFolder.addFolder('Dimensions');
     dimFolder.add(gridParams, 'width').name('Width');
     dimFolder.add(gridParams, 'height').name('Height');

@@ -147,30 +147,16 @@ class MarchingGrid {
                 this.cubes[x][y] = [];
                 for (var z = 0; z < this.depth; z++) {
                     // Define points of cube
-                    var points;
-                    if(x == 0 || y == 0 || z == 0 || x == this.width - 1 || y == this.height - 1 || z == this.depth - 1){
-                        var points = [
-                            new MarchingPoint(new Vector3(x * this.scale, y * this.scale, z * this.scale).add(this.pos), false),
-                            new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), false),
-                            new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), false),
-                            new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, z * this.scale).add(this.pos), false),
-                            new MarchingPoint(new Vector3(x * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), false),
-                            new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), false),
-                            new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), false),
-                            new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), false)
-                        ];
-                    } else {
-                        var points = [
-                            new MarchingPoint(new Vector3(x * this.scale, y * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
-                            new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
-                            new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
-                            new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
-                            new MarchingPoint(new Vector3(x * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
-                            new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
-                            new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
-                            new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5)
-                        ];
-                    }
+                    var points = [
+                        new MarchingPoint(new Vector3(x * this.scale, y * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
+                        new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
+                        new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
+                        new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, z * this.scale).add(this.pos), Math.random() < 0.5),
+                        new MarchingPoint(new Vector3(x * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
+                        new MarchingPoint(new Vector3(x * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
+                        new MarchingPoint(new Vector3((x + 1) * this.scale, (y + 1) * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5),
+                        new MarchingPoint(new Vector3((x + 1) * this.scale, y * this.scale, (z + 1) * this.scale).add(this.pos), Math.random() < 0.5)
+                    ];
 
                     
                     points = this.validatePoints(x, y, z, points);
