@@ -1,18 +1,27 @@
 import {
     Vector3,
+    Vector4,
     Color,
     Box3,
+    Box3Helper,
     BufferGeometry,
     BufferAttribute,
     Mesh,
-    Box3Helper,
+    Material,
+    Scene
 }from 'three'
 
 const ENABLED_COLOR = new Color(0,1,0);
 const DISABLED_COLOR = new Color(1,0,0);
+const BOUNDS_COLOR = new Color(1,1,1);
 
 class MarchingPoint {
 
+    /**
+     * @constructor
+     * @param {Vector3} pos Position
+     * @param {boolean} enabled Point state
+     */
     constructor(pos, enabled){
         this.pos = pos;
         this.enabled = enabled;
@@ -20,10 +29,12 @@ class MarchingPoint {
         //Collision box
         this.box = new Box3().setFromCenterAndSize(pos, new Vector3(0.1, 0.1, 0.1));
 
-        //Visual wireframe guide
         this.initGuide();
     }
 
+    /**
+     * Initalises a Three.JS Box3Helper.
+     */
     initGuide(){
         var color = new Color();
 
@@ -36,20 +47,23 @@ class MarchingPoint {
         this.guide = new Box3Helper(this.box, color);
     }
 
+    /**
+     * Checks if two points are the same value.
+     * @param {Vector3} point 
+     * @returns If the points are equal or not.
+     */
     equals(point){
         return this.pos.equals(point.pos);
     }
 
-    changeState(){
-        if(this.enabled) {
-            this.enabled = false;
-            this.mesh.material.color = DISABLED_COLOR;
-        }
-    }
 }
 
 class MarchingCube {
 
+    /**
+     * @constructor
+     * @param {MarchingPoint[]} points Cubes points
+     */
     constructor(points){
         this.points = points;
 
@@ -73,21 +87,33 @@ class MarchingCube {
         }
     }
 
+    /**
+     * Adds each points guide to a Three.JS scene.
+     * @param {Scene} scene Scene to add to
+     */
     addGuides(scene){
         for(var i = 0; i < this.points.length; i++){
             scene.add(this.points[i].guide);
         }
     }
 
+    /**
+     * Removes each points guide to a Three.JS scene.
+     * @param {Scene} scene Scene to remove from
+     */
     removeGuides(scene){
         for(var i = 0; i < this.points.length; i++){
             scene.remove(this.points[i].guide);
         }
     }
 
+    /**
+     * Gets vertex data from trianglulation table,
+     * based on if the points state.
+     * @returns Vertex data for the cube
+     */
     getVertices(){
-        //Get vertex data from trianglulation table based on which points are enabled
-        //Binary value based on enabled points should be the index of the correct vertex data
+        //Binary value based on enabled points corresponds to index of vertex data in trianglulation table
         var binaryIndex = '';
         for (var i = this.points.length - 1; i >= 0; i--) {
             binaryIndex += this.points[i].enabled ? '1' : '0';
@@ -111,6 +137,12 @@ class MarchingCube {
 
 class MarchingGrid {
 
+    /**
+     * @constructor
+     * @param {Vector3} pos Grid top-left position
+     * @param {Vector4} dimensions Width, height, depth, scale
+     * @param {Material} material Mesh material
+     */
     constructor(pos, dimensions, material){
         this.pos = pos;
         this.width = dimensions.x;
@@ -126,7 +158,7 @@ class MarchingGrid {
             this.pos.z + this.depth * this.scale
         );
 
-        this.boundsGuide = new Box3Helper(this.box);
+        this.boundsGuide = new Box3Helper(this.box, BOUNDS_COLOR);
 
         this.boundsGuideEnabled = false;
         this.pointGuidesEnabled = false;
@@ -139,6 +171,10 @@ class MarchingGrid {
         this.initGrid();
     }
 
+    /**
+     * Calculates each MarchingCube and its points,
+     * based on position and dimensions.
+     */
     initGrid(){
         //Generate grid of cubes
         for (var x = 0; x < this.width; x++) {
@@ -167,6 +203,14 @@ class MarchingGrid {
         }
     }
 
+    /**
+     * Checks if given points are duplicates of surrounding points.
+     * @param {number} x Loop index
+     * @param {number} y Loop index
+     * @param {number} z Loop index
+     * @param {MarchingPoint[]} points Points to be validated
+     * @returns Valid points
+     */
     validatePoints(x, y, z, points){
         const adjCubes = [];
 
@@ -203,6 +247,10 @@ class MarchingGrid {
         return validPoints;
     }
 
+    /**
+     * Transfers the MarchingCube data from another MarchingGrid.
+     * @param {MarchingGrid} oldGrid 
+     */
     transferPoints(oldGrid) {
         var minWidth = Math.min(this.width, oldGrid.width);
         var minHeight = Math.min(this.height, oldGrid.height);
@@ -217,6 +265,12 @@ class MarchingGrid {
         }
     }
 
+    /**
+     * Adds generated mesh to a Three.JS scene.
+     * @param {Scene} scene Scene to add to
+     * @param {boolean} boundsGuide Optional guide of MarchingGrid bounds
+     * @param {boolean} pointGuides Optional guide of MarhcingPoint position
+     */
     add(scene, boundsGuide, pointGuides){
         if(boundsGuide){
             this.boundsGuideEnabled = true;
@@ -237,6 +291,10 @@ class MarchingGrid {
         }
     }
 
+    /**
+     * Removes mesh and guides from a Three.JS scene.
+     * @param {Scene} scene Scene to remove from
+     */
     remove(scene){
         if(this.boundsGuideEnabled){
             scene.remove(this.boundsGuide);
@@ -258,6 +316,9 @@ class MarchingGrid {
         
     }
 
+    /**
+     * Retrieve vertex data from each MarchingCube and creates a Three.JS mesh.
+     */
     genMesh(){
         var vertices = [];
         for (var x = 0; x < this.width; x++) {
@@ -278,6 +339,11 @@ class MarchingGrid {
     
 }
 
+/**
+ * Triangulation table from Paul Bourke (1994)
+ * "Polygonising a scalar field"
+ * https://paulbourke.net/geometry/polygonise/
+ */
 const triangulationTable = [
     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
     [0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],

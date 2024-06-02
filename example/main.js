@@ -5,7 +5,7 @@ import { GUI } from 'gui';
 
 import { MarchingGrid } from 'marching_cubes';
 
-var scene, camera, renderer, controls, gui, clock;
+var scene, camera, renderer, controls, gui;
 var grid;
 
 function initScene(){
@@ -31,7 +31,6 @@ function initScene(){
     gui = new GUI();
 
     controls = new OrbitControls( camera, renderer.domElement );
-    clock = new THREE.Clock();
 }
 
 var gridParams = {
@@ -41,6 +40,7 @@ var gridParams = {
     depth: 10,
     scale: 1,
     color: 0xffffff,
+    wireframe: true,
     regenGrid: function(){
         grid.remove(scene);
         genGrid();
@@ -58,12 +58,18 @@ function initGui(){
 
     gridFolder.add(gridParams, 'regenGrid').name("Regenerate Grid");
 
-    gridFolder.addColor(gridParams, 'color').name("Color")
+    const materialFolder = gridFolder.addFolder('Material');
+
+    materialFolder.add(gridParams, 'wireframe').name('Wireframe')
+    .onChange(() => {
+        grid.mesh.material.wireframe = gridParams.wireframe;
+    })
+
+    materialFolder.addColor(gridParams, 'color').name("Color")
     .onChange(() => {
         grid.mesh.material.color = new THREE.Color(gridParams.color);
     });
     
-
 }
 
 function initLighting(){
@@ -89,8 +95,17 @@ function genGrid(){
         gridParams.scale
     );
 
-    const material = new THREE.MeshPhongMaterial({color: gridParams.color, side: THREE.DoubleSide});
+    const material = new THREE.MeshPhongMaterial({
+        color: new THREE.Color(gridParams.color), 
+        wireframe: gridParams.wireframe,
+        side: THREE.DoubleSide
+    });
 
+    /**
+     * Initialise MarchingGrid.
+     * Generate its mesh.
+     * Add it to the Three.JS scene.
+     */
     grid = new MarchingGrid(pos, dimensions, material);
 
     grid.genMesh();
