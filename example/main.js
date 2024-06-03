@@ -40,7 +40,7 @@ var gridParams = {
     depth: 10,
     scale: 1,
     color: 0xffffff,
-    wireframe: true,
+    wireframe: false,
     regenGrid: function(){
         grid.remove(scene);
         genGrid();
