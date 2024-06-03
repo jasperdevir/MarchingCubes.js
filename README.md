@@ -1,10 +1,10 @@
-# MarchingCubes.JS
+# MarchingCubes.js
 
 Implementation of marching cubes mesh generation algorithm within Three.JS.
 Inspired by Paul Bourke's: "Polygonising a scalar field" (1996).
 https://paulbourke.net/geometry/polygonise/
 
-## How to use
+## Usage
 
 Import MarchingGrid class.
 ```JavaScript
